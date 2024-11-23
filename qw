@@ -1,0 +1,60 @@
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
+# تحميل الصورة وتحويلها إلى تدرج رمادي
+def load_image(image_path):
+    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    img = cv2.resize(img, (500, 500))  # تغيير الحجم إذا لزم الأمر
+    return img
+
+# رسم النقاط على حواف الصورة
+def generate_nails(image, num_nails=200):
+    h, w = image.shape
+    radius = min(h, w) // 2 - 20
+    center = (w // 2, h // 2)
+
+    nails = []
+    for i in range(num_nails):
+        angle = 2 * np.pi * i / num_nails
+        x = int(center[0] + radius * np.cos(angle))
+        y = int(center[1] + radius * np.sin(angle))
+        nails.append((x, y))
+    return nails
+
+# رسم الخطوط بين النقاط
+def create_string_art(image, nails, num_lines=1000):
+    h, w = image.shape
+    lines = []
+    current_nail = 0
+    for _ in range(num_lines):
+        intensities = []
+        for i, (x, y) in enumerate(nails):
+            line_mask = np.zeros_like(image)
+            cv2.line(line_mask, nails[current_nail], (x, y), 255, 1)
+            intensity = cv2.mean(image, mask=line_mask)[0]
+            intensities.append((intensity, i))
+
+        next_nail = max(intensities, key=lambda x: x[0])[1]
+        lines.append((current_nail, next_nail))
+        current_nail = next_nail
+    return lines
+
+# رسم الشكل النهائي
+def draw_string_art(image, nails, lines):
+    output = np.ones_like(image) * 255
+    for start, end in lines:
+        cv2.line(output, nails[start], nails[end], 0, 1)
+    return output
+
+# تنفيذ الخطوات
+image_path = "/mnt/data/1.jpg"  # ضع مسار الصورة هنا
+image = load_image(image_path)
+nails = generate_nails(image)
+lines = create_string_art(image, nails)
+output = draw_string_art(image, nails, lines)
+
+# عرض النتيجة
+plt.imshow(output, cmap='gray')
+plt.axis('off')
+plt.show()
